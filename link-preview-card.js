@@ -20,12 +20,13 @@ export class LinkPreviewCard extends DDDSuper(I18NMixin(LitElement)) {
 
   constructor() {
     super();
-    this.title = "";
-    this.t = this.t || {};
-    this.t = {
-      ...this.t,
-      title: "Title",
-    };
+    this.title = "placeholder title";
+    this.href = "";
+    this.description = "";
+    this.image = "";
+    this.link = "";
+    this.theme = ""; 
+    this.loading = false;
     this.registerLocalization({
       context: this,
       localesPath:
@@ -33,13 +34,19 @@ export class LinkPreviewCard extends DDDSuper(I18NMixin(LitElement)) {
         "/../",
       locales: ["ar", "es", "hi", "zh"],
     });
-  }
+  };
 
   // Lit reactive properties
   static get properties() {
     return {
       ...super.properties,
       title: { type: String },
+      href: { type: String },
+      description: { type: String },
+      image: { type: String },
+      link: { type: String },
+      theme: { type: String },
+      loading: { type: Boolean, reflect : true }
     };
   }
 
@@ -53,23 +60,89 @@ export class LinkPreviewCard extends DDDSuper(I18NMixin(LitElement)) {
         background-color: var(--ddd-theme-accent);
         font-family: var(--ddd-font-navigation);
       }
-      .wrapper {
-        margin: var(--ddd-spacing-2);
-        padding: var(--ddd-spacing-4);
+      img{
+        max-width: 100%;
+        height: auto;
       }
-      h3 span {
-        font-size: var(--link-preview-card-label-font-size, var(--ddd-font-size-s));
+      .title {
+        font-size: var(--link-preview-card-title-font-size, var(--ddd-font-size-l));
+        margin: var(--ddd-spacing-1) 0;
+      }
+
+      .loader {
+        border: 16px solid #7cffff; /* Light grey */
+        border-top: 16px solid #5202bd; /* Blue */
+        border-radius: 50%;
+        width: 100px;
+        height: 100px;
+        animation: spin 1.5s ease-in-out infinite;
+        animation-direction: alternate;
+      }
+
+      @keyframes spin {
+        50% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
       }
     `];
+  }
+
+  updated(changedProperties) {
+    if (changedProperties.has("href") && this.href) {
+      this.fetchData(this.href);
+    }
+  }
+
+  async fetchData(link) {
+    this.loading = true;
+    const url = `https://open-apis.hax.cloud/api/services/website/metadata?q=${link}`;
+    try {
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error("Network response was not ok");
+      }
+      const json = await response.json();
+      this.title = json.data["og:title"] || json.data["title"] || "No Title Available";
+      this.description = json.data["description"] || "No Description Available";
+      this.image = json.data["image"] || json.data["logo"] || json.data["og:image"] || "";
+      this.link = json.data["url"] || link;
+      this.themeColor = json.data["theme-color"] || this.DefaultTheme();
+    } 
+
+    catch (error) {
+      console.error("Error fetching metadata:", error);
+      this.title = "No Preview Available";
+      this.description = "";
+      this.image = "";
+      this.link = "";
+      this.themeColor = "";
+    }
+  }
+
+  defaultTheme() {
+    if (this.href.includes("psu.edu")) {
+      return "--ddd-primary-2"
+    }
+    else {
+      return "--ddd-primary-20";
+    }
   }
 
   // Lit render the HTML
   render() {
     return html`
-<div class="wrapper">
-  <h3><span>${this.t.title}:</span> ${this.title}</h3>
-  <slot></slot>
-</div>`;
+    <div class="wrapper">
+        ${this.loadingState
+          ? html`<div class="loading-spinner"></div>`
+          : html`
+            ${this.image ? html`<img src="${this.image}" alt="Preview Image" />` : ''}
+            <div class="content">
+              <h3 class="title">${this.title}</h3>
+              <p class="desc">${this.description}</p>
+              <a href="${this.link}" target="_blank" class="url">Visit Site</a>
+            </div>
+        `}
+      </div>
+    `;
   }
 
   /**
