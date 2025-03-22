@@ -46,7 +46,7 @@ export class LinkPreviewCard extends DDDSuper(I18NMixin(LitElement)) {
       image: { type: String },
       link: { type: String },
       theme: { type: String },
-      loading: { type: Boolean, reflect : true }
+      loading: { type: Boolean, reflect : true, attribute: "loading-state" },
     };
   }
 
@@ -55,18 +55,73 @@ export class LinkPreviewCard extends DDDSuper(I18NMixin(LitElement)) {
     return [super.styles,
     css`
       :host {
-        display: block;
+        display: grid;
+        grid-template-columns: 1fr;
+        grid-gap: var(--ddd-spacing-2);
         color: var(--ddd-theme-primary);
         background-color: var(--ddd-theme-accent);
         font-family: var(--ddd-font-navigation);
+        max-width: 500px;
+        margin: var(--ddd-spacing-2);
+        
       }
-      img{
-        max-width: 100%;
-        height: auto;
+      .wrapper {
+        display: grid;
+        grid-template-columns: 450px;
+        color: var(--ddd-theme-primary);
+        background-color: var(--ddd-theme-accent);
+        font-family: var(--ddd-font-navigation);
+        max-width: 500px;
+        box-shadow: var(--ddd-box-shadow);
+        margin: var(--ddd-spacing-2);
+        border: var(--ddd-border-md);
+        border-radius: var(--ddd-radius-lg);
       }
+      
       .title {
         font-size: var(--link-preview-card-title-font-size, var(--ddd-font-size-l));
         margin: var(--ddd-spacing-1) 0;
+        padding: var(--ddd-spacing-2);
+        
+      }
+      .image{
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        width: 100%;
+        max-width: 400px;
+        height: auto;
+        padding: var(--ddd-spacing-2);
+        position: relative;
+      }
+
+      img { 
+        display: block; 
+        max-width: 100%;
+        max-height: 400px;
+        object-fit: contain;
+        height: auto;
+        border-radius: var(--ddd-radius-md);
+      }
+
+      .url {
+        display: block;
+        font-size: var(--link-preview-card-url-font-size, var(--ddd-font-size-s));
+        margin: var(--ddd-spacing-1) 0;
+        padding: var(--ddd-spacing-2);
+        text-overflow: ellipsis;
+        overflow: hidden;
+        white-space: nowrap;
+      }
+
+      .desc {
+        display: block;
+        font-size: var(--link-preview-card-desc-font-size, var(--ddd-font-size-s)); 
+        text-overflow: ellipsis;
+        overflow: hidden;
+        white-space: nowrap;
+        margin: var(--ddd-spacing-1) 0;
+        padding: var(--ddd-spacing-2);
       }
 
       .loader {
@@ -75,7 +130,7 @@ export class LinkPreviewCard extends DDDSuper(I18NMixin(LitElement)) {
         border-radius: 50%;
         width: 100px;
         height: 100px;
-        animation: spin 1.5s ease-in-out infinite;
+        animation: spin 1s ease-in-out infinite;
         animation-direction: alternate;
       }
 
@@ -83,6 +138,19 @@ export class LinkPreviewCard extends DDDSuper(I18NMixin(LitElement)) {
         50% { transform: rotate(0deg); }
         100% { transform: rotate(360deg); }
       }
+
+      @media not screen and (min-width: 500px) and (max-width: 800px) {
+        .title {
+        font-size: var(--link-preview-card-title-font-size, var(--ddd-font-size-l));
+        margin: var(--ddd-spacing-1) 0;
+        padding: var(--ddd-spacing-2);
+        text-overflow: ellipsis;
+        overflow: hidden;
+        white-space: nowrap; 
+        }
+      }
+
+
     `];
   }
 
@@ -93,7 +161,10 @@ export class LinkPreviewCard extends DDDSuper(I18NMixin(LitElement)) {
   }
 
   async fetchData(link) {
+    
     this.loading = true;
+    this.requestUpdate();
+
     const url = `https://open-apis.hax.cloud/api/services/website/metadata?q=${link}`;
     try {
       const response = await fetch(url);
@@ -105,7 +176,7 @@ export class LinkPreviewCard extends DDDSuper(I18NMixin(LitElement)) {
       this.description = json.data["description"] || "No Description Available";
       this.image = json.data["image"] || json.data["logo"] || json.data["og:image"] || "";
       this.link = json.data["url"] || link;
-      this.themeColor = json.data["theme-color"] || this.DefaultTheme();
+      this.themeColor = json.data["theme-color"] || this.defaultTheme();
     } 
 
     catch (error) {
@@ -114,32 +185,39 @@ export class LinkPreviewCard extends DDDSuper(I18NMixin(LitElement)) {
       this.description = "";
       this.image = "";
       this.link = "";
-      this.themeColor = "";
+      this.themeColor = this.defaultTheme();
     }
+    finally {
+      this.loading = false;
+    }
+
+    await this.updateComplete;
+
   }
 
   defaultTheme() {
     if (this.href.includes("psu.edu")) {
-      return "--ddd-primary-2"
+      return "var(--ddd-primary-2)";
     }
     else {
-      return "--ddd-primary-20";
+      return "var(--ddd-primary-8)";
     }
   }
 
   // Lit render the HTML
   render() {
+
     return html`
-    <div class="wrapper">
-        ${this.loadingState
-          ? html`<div class="loading-spinner"></div>`
-          : html`
-            ${this.image ? html`<img src="${this.image}" alt="Preview Image" />` : ''}
+    <div class="wrapper" style="border-color: ${this.themeColor}">
+        ${this.loading ? html`<div class="loader"></div>` : html`
             <div class="content">
               <h3 class="title">${this.title}</h3>
+              <a href="${this.link}" target="_blank" class="url">${this.href}</a>
               <p class="desc">${this.description}</p>
-              <a href="${this.link}" target="_blank" class="url">Visit Site</a>
             </div>
+            <div class="image">
+              ${this.image ? html`<img id="preview-image" src="${this.image}" alt="" />` : ''}
+            </div>  
         `}
       </div>
     `;
