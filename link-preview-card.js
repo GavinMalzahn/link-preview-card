@@ -125,11 +125,11 @@ export class LinkPreviewCard extends DDDSuper(I18NMixin(LitElement)) {
       }
 
       .loader {
-        border: 16px solid #7cffff; /* Light grey */
-        border-top: 16px solid #5202bd; /* Blue */
-        border-radius: 50%;
-        width: 100px;
-        height: 100px;
+        border: 12px solid #7cffff; /* Light grey */
+        border-top: 12px solid #5202bd; /* Blue */
+        border-radius: --ddd-radius-rounded;
+        width: 40px;
+        height: 40px;
         animation: spin 1s ease-in-out infinite;
         animation-direction: alternate;
       }
